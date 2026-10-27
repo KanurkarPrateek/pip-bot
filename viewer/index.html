@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip Desk Robot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eceae6; --bg2: #f8f7f4; --ink: #1d2026; --muted: #6b6f78;
+    --card: rgba(255,255,255,.78); --line: rgba(20,24,32,.10);
+    --accent: #ff7a45; --chip: #ffffff; --chip-on: #1d2026; --chip-on-ink: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171c; --bg2: #22252c; --ink: #eef0f4; --muted: #9aa0ab;
+      --card: rgba(30,33,40,.8); --line: rgba(255,255,255,.10);
+      --chip: #2a2e36; --chip-on: #ff7a45; --chip-on-ink: #15171c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Space Grotesk", system-ui, sans-serif; color: var(--ink);
+    background: radial-gradient(ellipse at 50% 35%, var(--bg2), var(--bg) 70%);
+    background-color: var(--bg); overflow: hidden;
+  }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; outline: none; }
+  .panel {
+    position: fixed; top: 16px; left: 16px; width: 300px; max-height: calc(100% - 32px); overflow: auto;
+    background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: 18px; padding: 18px;
+  }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin: 4px 0 14px; line-height: 1.4; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 8px; font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  button.chip {
+    font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+    padding: 6px 10px; border-radius: 999px; cursor: pointer; transition: transform .1s;
+  }
+  button.chip:hover { transform: translateY(-1px); }
+  button.chip.on { background: var(--chip-on); color: var(--chip-on-ink); border-color: transparent; }
+  button.chip kbd { font: inherit; font-size: 10px; opacity: .5; margin-left: 4px; }
+  .seg { display: flex; background: var(--chip); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button { flex: 1; font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink); padding: 7px 4px; border-radius: 9px; cursor: pointer; }
+  .seg button.on { background: var(--chip-on); color: var(--chip-on-ink); }
+  label.tog { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 8px; cursor: pointer; }
+  label.tog input { accent-color: var(--accent); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.45; }
+  .note {
+    position: fixed; right: 16px; bottom: 16px; max-width: 320px; font-size: 13px; line-height: 1.45;
+    background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; color: var(--muted);
+  }
+  .note b { color: var(--ink); font-weight: 500; }
+  .lbl {
+    font-family: "Space Grotesk", system-ui, sans-serif; font-size: 11px; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line); padding: 2px 7px; border-radius: 999px;
+    white-space: nowrap; pointer-events: none; transition: opacity .3s;
+  }
+  .lbl.elec { border-color: #3fb57f; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; }
+  body.clean .panel, body.clean .note { display: none; }
+  @media (max-width: 720px) {
+    .panel { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 46%; padding: 14px; }
+    .note { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="loading">Loading Pip…</div>
+
+<div class="panel">
+  <h1>Pip <span>●</span></h1>
+  <p class="sub">A 14 cm desk robot: ESP32 brain, color screen face, nodding head, waving arms. Everything here is built from the real printable parts.</p>
+
+  <h2>Expression</h2>
+  <div class="chips" id="exprs"></div>
+
+  <h2>View</h2>
+  <div class="seg" id="views">
+    <button data-v="assembled" class="on">Assembled</button>
+    <button data-v="exploded">Exploded</button>
+    <button data-v="xray">X-ray</button>
+  </div>
+  <label class="tog"><input type="checkbox" id="follow" checked> Pip watches your cursor</label>
+  <label class="tog"><input type="checkbox" id="spin"> Slowly spin the stage</label>
+  <label class="tog"><input type="checkbox" id="labels" checked> Show part labels</label>
+
+  <p class="hint">Drag to orbit, scroll to zoom. Click Pip's head to "pet" him — that's the touch sensor under the top of the head.</p>
+</div>
+
+<div class="note" id="note"></div>
+
+<script src="parts-data.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const params = new URLSearchParams(location.search);
+if (params.get('ui') === '0') document.body.classList.add('clean');
+
+// ---------- renderer / scene ----------
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+Object.assign(labelRenderer.domElement.style, { position: 'fixed', inset: '0', pointerEvents: 'none' });
+document.body.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 1, 5000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 68, 0);
+controls.minDistance = 120; controls.maxDistance = 900;
+const narrow = innerWidth < 720;
+camera.position.set(narrow ? 210 : 170, 150, narrow ? 420 : 300);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb9b2a6, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(120, 260, 160);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -160, right: 160, top: 200, bottom: -80, near: 10, far: 700 });
+sun.shadow.radius = 6; sun.shadow.bias = -0.0004;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0xbfd8ff, 0.9);
+rim.position.set(-200, 120, -180);
+scene.add(rim);
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(420, 64), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+scene.add(ground);
+
+// ---------- materials ----------
+const M = {
+  cream: new THREE.MeshStandardMaterial({ color: 0xf3eee5, roughness: 0.55 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x2c3038, roughness: 0.5 }),
+  accent: new THREE.MeshStandardMaterial({ color: 0xff7a45, roughness: 0.45 }),
+  servo: new THREE.MeshStandardMaterial({ color: 0x2f6fd6, roughness: 0.45 }),
+  pcb: new THREE.MeshStandardMaterial({ color: 0x1f7a4d, roughness: 0.6 }),
+  pcbBlue: new THREE.MeshStandardMaterial({ color: 0x1b4fa0, roughness: 0.6 }),
+  batt: new THREE.MeshStandardMaterial({ color: 0xc8ccd4, roughness: 0.3, metalness: 0.6 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x111316, roughness: 0.4 }),
+  white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }),
+};
+const shellMats = [M.cream, M.dark, M.accent];
+for (const m of shellMats) m.userData.base = { opacity: 1 };
+
+// ---------- load real printable parts ----------
+function b64(str, Type) {
+  const bin = atob(str); const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Type(u8.buffer);
+}
+function partMesh(name, mat) {
+  const d = window.PIP_PARTS[name];
+  let g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(b64(d.pos, Float32Array), 3));
+  g.setIndex(new THREE.BufferAttribute(b64(d.idx, Uint32Array), 1));
+  g = toCreasedNormals(g, THREE.MathUtils.degToRad(35));
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.userData.part = name;
+  return mesh;
+}
+
+// explode-able wrapper: an Object3D whose position slides from base to base+offset
+const explodables = [];
+function wrap(parent, offset, base = [0, 0, 0]) {
+  const w = new THREE.Group();
+  w.position.set(...base);
+  w.userData.base = new THREE.Vector3(...base);
+  w.userData.off = new THREE.Vector3(...offset);
+  parent.add(w); explodables.push(w);
+  return w;
+}
+const labels = [];
+function label(obj, text, at, kind = 'part') {
+  const el = document.createElement('div');
+  el.className = 'lbl' + (kind === 'elec' ? ' elec' : '');
+  el.textContent = text;
+  const o = new CSS2DObject(el); o.position.set(...at);
+  o.userData.kind = kind; obj.add(o); labels.push(o);
+  return o;
+}
+const electronics = [];
+function ebox(parent, size, pos, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(...size), mat);
+  m.position.set(...pos); m.castShadow = true;
+  parent.add(m); electronics.push(m); return m;
+}
+function servo(parent, pos, shaftDir = [0, 1, 0], longDir = [0, 0, 1]) {
+  // SG90 in local space: shaft along +y, length along +z (shaft sits 5.9 mm toward +z), 12.2 wide in x
+  const g = new THREE.Group(); g.position.set(...pos);
+  const Y = new THREE.Vector3(...shaftDir), Z = new THREE.Vector3(...longDir), X = new THREE.Vector3().crossVectors(Y, Z);
+  g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
+  const body = new THREE.Mesh(new THREE.BoxGeometry(12.2, 22.7, 22.5), M.servo);
+  const tabs = new THREE.Mesh(new THREE.BoxGeometry(12.2, 2.5, 32.3), M.servo);
+  tabs.position.y = 22.7 / 2 - 4.5 - 1.25;
+  const gear = new THREE.Mesh(new THREE.CylinderGeometry(5.9, 5.9, 4, 24), M.servo);
+  gear.position.set(0, 22.7 / 2 + 2, 5.9);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.2, 16), M.white);
+  shaft.position.set(0, 22.7 / 2 + 5.6, 5.9);
+  g.add(body, tabs, gear, shaft);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  parent.add(g); electronics.push(g); return g;
+}
+
+const robot = new THREE.Group();
+scene.add(robot);
+
+// body
+const bodyMesh = partMesh('body_shell', M.cream); robot.add(bodyMesh);
+label(bodyMesh, 'Body shell', [-30, 8, 30]);
+const coverW = wrap(robot, [0, 0, -70]);
+coverW.add(partMesh('back_cover', M.dark));
+label(coverW, 'Back cover · USB-C + switch', [0, 30, -28]);
+
+// electronics in the body (three.js coords: x = robot's left, y up, z front)
+const sPan = servo(robot, [0, 46.15, -5.9]);
+label(sPan, 'Pan servo (turns head)', [0, 6, -14], 'elec');
+for (const s of [-1, 1]) {
+  const g = servo(robot, [s * 26.15, 34.1, 4], [s, 0, 0], [0, 1, 0]); // shaft out through the side wall
+  if (s < 0) label(g, 'Arm servos ×2', [0, 0, 0], 'elec');
+}
+ebox(robot, [50, 6, 34], [0, 5, 0], M.batt);
+label(electronics.at(-1), '1000 mAh LiPo', [0, 0, 18], 'elec');
+ebox(robot, [25, 2, 21], [0, 9.5, -16.5], M.pcbBlue);
+label(electronics.at(-1), 'Charger + 5 V boost', [-6, 2, -10], 'elec');
+ebox(robot, [9, 3.2, 7], [0, 10, -25.5], M.batt);
+ebox(robot, [18, 2.5, 22.5], [0, 9.25, 9.25], M.pcb);
+label(electronics.at(-1), 'ESP32-S3', [0, 2, 8], 'elec');
+ebox(robot, [18, 2.5, 18], [22, 9.25, -11], M.pcb);
+label(electronics.at(-1), 'I2S amp', [4, 2, 0], 'elec');
+{
+  const spk = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 4, 32), M.black);
+  spk.rotation.x = Math.PI / 2; spk.position.set(0, 18, 23.2); robot.add(spk); electronics.push(spk);
+  label(spk, 'Speaker', [0, 0, 0], 'elec');
+}
+
+// arms (pivot at the servo shaft, rotation about x)
+const arms = [];
+for (const [name, s] of [['arm_r', -1], ['arm_l', 1]]) {
+  const pivotPos = [s * 41.5, 40, 4];
+  const w = wrap(robot, [s * 45, -10, 0], pivotPos);
+  const pivot = new THREE.Group(); w.add(pivot);
+  const m = partMesh(name, M.accent); m.position.set(-pivotPos[0], -pivotPos[1], -pivotPos[2]);
+  pivot.add(m); arms.push(pivot);
+  if (s > 0) label(w, 'Arm ×2', [10, -26, 0]);
+}
+
+// neck (pans) and head (tilts)
+const pan = new THREE.Group(); robot.add(pan);
+const neckW = wrap(pan, [0, 30, 0]);
+neckW.add(partMesh('neck', M.dark));
+label(neckW, 'Neck', [18, 80, 0]);
+
+const TILT_Y = 96;
+const tiltW = wrap(pan, [0, 80, 0], [0, TILT_Y, 0]);
+const tilt = new THREE.Group(); tiltW.add(tilt);
+const head = new THREE.Group(); head.position.y = -TILT_Y; tilt.add(head);
+head.add(partMesh('head_shell', M.cream));
+label(head, 'Head shell', [-36, 120, 0]);
+const faceW = wrap(head, [0, 0, 70]);
+faceW.add(partMesh('face_bezel', M.dark));
+label(faceW, 'Face bezel', [28, 120, 24]);
+for (const [name, s] of [['ear_r', -1], ['ear_l', 1]]) {
+  const w = wrap(head, [s * 32, 0, 0]); w.add(partMesh(name, M.accent));
+  if (s > 0) label(w, 'Ear ×2', [42, 112, -2]);
+}
+const antW = wrap(head, [0, 40, 0]);
+const antenna = partMesh('antenna', M.accent); antW.add(antenna);
+label(antW, 'Antenna', [-8, 140, -4]);
+const tiltServo = servo(head, [-16.85, 90.1, 0], [1, 0, 0], [0, 1, 0]);
+label(tiltServo, 'Tilt servo (nods)', [0, 0, -14], 'elec');
+ebox(head, [15, 1.6, 11], [0, 118.6, -4], M.pcbBlue);
+label(electronics.at(-1), 'Touch pad', [0, 4, 0], 'elec');
+
+// the screen: a canvas texture just behind the bezel window
+const SCR_W = 32.8, SCR_H = 28.2;
+const cvs = document.createElement('canvas'); cvs.width = 656; cvs.height = 564;
+const ctx = cvs.getContext('2d');
+const tex = new THREE.CanvasTexture(cvs); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+screen.position.set(0, 98, 22.05);
+faceW.add(screen);
+const panel = ebox(faceW, [38, 30.6, 1.6], [0, 98, 21.2], M.black);
+electronics.pop(); // the panel is always visible
+const lcdPcb = ebox(faceW, [40, 34, 1.2], [0, 97, 19.8], M.pcbBlue);
+label(lcdPcb, '1.69" color display', [0, -19, 0], 'elec');
+
+// ---------- the face ----------
+const EXPR = {
+  neutral:   { key: '1', label: 'Neutral',   w: 118, h: 150, r: 34, col: [95, 232, 255], lid: [[0, 0], [0, 0]], bot: 0, mouth: null, blush: 0 },
+  happy:     { key: '2', label: 'Happy',     w: 130, h: 140, r: 44, col: [110, 240, 255], lid: [[0, 0], [0, 0]], bot: 0.62, mouth: 'smile', blush: 0.8 },
+  sad:       { key: '3', label: 'Sad',       w: 116, h: 128, r: 34, col: [100, 150, 255], lid: [[0.02, 0.5], [0.02, 0.5]], bot: 0, mouth: 'frown', blush: 0, tear: true },
+  angry:     { key: '4', label: 'Angry',     w: 124, h: 118, r: 26, col: [255, 96, 72], lid: [[0.55, 0.05], [0.55, 0.05]], bot: 0, mouth: 'flat', blush: 0 },
+  surprised: { key: '5', label: 'Surprised', w: 138, h: 168, r: 69, col: [190, 248, 255], lid: [[0, 0], [0, 0]], bot: 0, mouth: 'o', blush: 0, small: true },
+  sleepy:    { key: '6', label: 'Sleepy',    w: 128, h: 120, r: 30, col: [80, 190, 220], lid: [[0.68, 0.68], [0.68, 0.68]], bot: 0, mouth: null, blush: 0, zzz: true },
+  love:      { key: '7', label: 'Love',      w: 130, h: 130, r: 40, col: [255, 110, 170], lid: [[0, 0], [0, 0]], bot: 0, mouth: 'smile', blush: 1, heart: true },
+  curious:   { key: '8', label: 'Curious',   w: 120, h: 150, r: 34, col: [95, 232, 255], lid: [[0, 0], [0.38, 0.32]], bot: 0, mouth: null, blush: 0, hScale: [1.12, 0.9] },
+};
+const face = { w: 118, h: 150, r: 34, col: [95, 232, 255], lid: [[0, 0], [0, 0]], bot: 0, blush: 0, heart: 0, hs: [1, 1], tear: 0 };
+let expr = 'neutral', mood = EXPR.neutral, tempExpr = null, tempUntil = 0;
+const gaze = { x: 0, y: 0, tx: 0, ty: 0, next: 0 };
+let blinkStart = 0, nextBlink = 1500;
+const lerp = (a, b, k) => a + (b - a) * k;
+
+function roundRect(c, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function heartPath(c, cx, cy, s) {
+  c.beginPath(); c.moveTo(cx, cy + s * 0.35);
+  c.bezierCurveTo(cx - s * 1.1, cy - s * 0.35, cx - s * 0.5, cy - s * 1.0, cx, cy - s * 0.45);
+  c.bezierCurveTo(cx + s * 0.5, cy - s * 1.0, cx + s * 1.1, cy - s * 0.35, cx, cy + s * 0.35);
+  c.closePath();
+}
+
+function drawFace(t) {
+  const k = 0.16, cur = tempExpr && t < tempUntil ? EXPR[tempExpr] : mood;
+  if (tempExpr && t >= tempUntil) tempExpr = null;
+  face.w = lerp(face.w, cur.w, k); face.h = lerp(face.h, cur.h, k); face.r = lerp(face.r, cur.r, k);
+  face.bot = lerp(face.bot, cur.bot, k); face.blush = lerp(face.blush, cur.blush, k);
+  face.heart = lerp(face.heart, cur.heart ? 1 : 0, k); face.tear = lerp(face.tear, cur.tear ? 1 : 0, 0.05);
+  for (let i = 0; i < 3; i++) face.col[i] = lerp(face.col[i], cur.col[i], k);
+  for (let e = 0; e < 2; e++) {
+    for (let j = 0; j < 2; j++) face.lid[e][j] = lerp(face.lid[e][j], cur.lid[e][j], k);
+    face.hs[e] = lerp(face.hs[e], cur.hScale ? cur.hScale[e] : 1, k);
+  }
+
+  // gaze: follow cursor or wander
+  if (t > gaze.next && !(follow.checked && pointer.active)) {
+    gaze.tx = (Math.random() - 0.5) * 1.3; gaze.ty = (Math.random() - 0.5) * 0.7;
+    if (Math.random() < 0.35) { gaze.tx = 0; gaze.ty = 0; }
+    gaze.next = t + 1200 + Math.random() * 2200;
+  }
+  if (cur === EXPR.curious) gaze.tx = 0.6;
+  gaze.x = lerp(gaze.x, gaze.tx, 0.2); gaze.y = lerp(gaze.y, gaze.ty, 0.2);
+
+  // blink
+  if (t > nextBlink) { blinkStart = t; nextBlink = t + 2200 + Math.random() * 3200; if (Math.random() < 0.2) nextBlink = t + 260; }
+  const bt = (t - blinkStart) / 170;
+  const blink = bt >= 0 && bt <= 1 ? 1 - Math.sin(bt * Math.PI) * 0.94 : 1;
+
+  const W = cvs.width, H = cvs.height, BG = '#05080b';
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  const [r, g, b] = face.col.map(Math.round);
+  const col = `rgb(${r},${g},${b})`;
+  const S = 1.38, gap = 64, cy0 = H * 0.44 + gaze.y * 40;
+
+  for (let e = 0; e < 2; e++) {
+    const side = e === 0 ? -1 : 1;
+    const w = face.w * S, h = face.h * S * face.hs[e] * blink;
+    const cx = W / 2 + side * (gap / 2 + w / 2) + gaze.x * 60;
+    const x = cx - w / 2, y = cy0 - h / 2;
+
+    ctx.save();
+    ctx.shadowColor = `rgba(${r},${g},${b},0.75)`; ctx.shadowBlur = 36;
+    ctx.fillStyle = col;
+    if (face.heart > 0.5) {
+      const s = 62 * S * (1 + Math.sin(t / 160) * 0.06);
+      heartPath(ctx, cx, cy0 + 8, s); ctx.fill();
+    } else {
+      roundRect(ctx, x, y, w, h, Math.min(face.r * S, h / 2)); ctx.fill();
+      // a soft highlight makes the eyes feel glassy
+      ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      roundRect(ctx, x + w * 0.16, y + h * 0.12, w * 0.24, Math.max(0, h * 0.18), 10); ctx.fill();
+    }
+    ctx.restore();
+
+    if (face.heart <= 0.5) {
+      // top lid: a background-colored slab with a slanted edge (inner/outer = toward/away from centre)
+      const [lin, lout] = face.lid[e];
+      const leftCov = side < 0 ? lout : lin, rightCov = side < 0 ? lin : lout;
+      ctx.fillStyle = BG; ctx.beginPath();
+      ctx.moveTo(x - 30, y - 80); ctx.lineTo(x + w + 30, y - 80);
+      ctx.lineTo(x + w + 30, y + rightCov * h + (rightCov - leftCov) * h * 30 / w);
+      ctx.lineTo(x - 30, y + leftCov * h - (rightCov - leftCov) * h * 30 / w);
+      ctx.closePath(); ctx.fill();
+      // bottom lid: a rising ellipse turns the eye into a happy arc
+      if (face.bot > 0.01) {
+        ctx.beginPath();
+        ctx.ellipse(cx, y + h + h * 0.62 - face.bot * h * 0.9, w * 0.95, h * 0.62, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // blush
+    if (face.blush > 0.02) {
+      ctx.fillStyle = `rgba(255,120,160,${0.45 * face.blush})`;
+      ctx.beginPath(); ctx.ellipse(cx + side * 40, cy0 + 135, 38, 16, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // tear
+  if (face.tear > 0.05) {
+    const ty = cy0 + 90 + ((t / 9) % 140);
+    ctx.fillStyle = `rgba(120,180,255,${face.tear * (1 - ((t / 9) % 140) / 140)})`;
+    ctx.beginPath(); ctx.arc(W / 2 + 150 + gaze.x * 60, ty, 11, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // mouth
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 9; ctx.lineCap = 'round';
+  const mx = W / 2 + gaze.x * 50, my = H * 0.86 + gaze.y * 24;
+  ctx.save(); ctx.shadowColor = `rgba(${r},${g},${b},0.7)`; ctx.shadowBlur = 18;
+  if (cur.mouth === 'smile') { ctx.beginPath(); ctx.arc(mx, my - 18, 26, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+  if (cur.mouth === 'frown') { ctx.beginPath(); ctx.arc(mx, my + 22, 22, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
+  if (cur.mouth === 'flat') { ctx.beginPath(); ctx.moveTo(mx - 26, my); ctx.lineTo(mx - 9, my - 7); ctx.lineTo(mx + 9, my + 7); ctx.lineTo(mx + 26, my); ctx.stroke(); }
+  if (cur.mouth === 'o') { ctx.beginPath(); ctx.ellipse(mx, my, 14, 18, 0, 0, Math.PI * 2); ctx.stroke(); }
+  if (cur.zzz) {
+    ctx.font = '700 46px "Space Grotesk", sans-serif'; ctx.lineWidth = 0;
+    for (let i = 0; i < 3; i++) {
+      const p = ((t / 1800) + i / 3) % 1;
+      ctx.globalAlpha = Math.sin(p * Math.PI);
+      ctx.fillText('z', W * 0.78 + p * 60, H * 0.32 - p * 120 - i * 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  tex.needsUpdate = true;
+}
+
+// ---------- body language (only the 4 joints the real robot has) ----------
+const joint = { pan: 0, tilt: 0, armL: 0, armR: 0 };
+const D = THREE.MathUtils.degToRad;
+function pose(t) {
+  const s = t / 1000, cur = tempExpr ? EXPR[tempExpr] : mood;
+  const p = { pan: 0, tilt: 0, armL: 0, armR: 0 };
+  switch (cur) {
+    case EXPR.happy: p.tilt = -8 + 3 * Math.sin(s * 7); p.armR = 70 + 35 * Math.sin(s * 8); p.armL = 70 + 35 * Math.sin(s * 8 + Math.PI); break;
+    case EXPR.sad: p.tilt = 15; p.armL = p.armR = 4; p.pan = 6 * Math.sin(s * 0.8); break;
+    case EXPR.angry: p.tilt = 7; p.armL = p.armR = 45 + 8 * Math.sin(s * 22); p.pan = 4 * Math.sin(s * 16); break;
+    case EXPR.surprised: p.tilt = -14; p.armL = p.armR = 115; break;
+    case EXPR.sleepy: p.tilt = 13 + 2 * Math.sin(s * 1.3); p.armL = p.armR = 3; break;
+    case EXPR.love: p.pan = 14 * Math.sin(s * 3); p.tilt = -6; p.armL = p.armR = 55 + 6 * Math.sin(s * 6); break;
+    case EXPR.curious: p.pan = 22; p.tilt = -10; p.armR = 30; break;
+    default: p.pan = 5 * Math.sin(s * 0.5); p.tilt = 2 * Math.sin(s * 0.7); p.armL = p.armR = 6 + 3 * Math.sin(s * 1.1);
+  }
+  if (follow.checked && pointer.active && cur !== EXPR.sleepy && cur !== EXPR.sad) {
+    p.pan += pointer.x * 35; p.tilt += -pointer.y * 12;
+  }
+  p.pan = THREE.MathUtils.clamp(p.pan, -60, 60);
+  p.tilt = THREE.MathUtils.clamp(p.tilt, -15, 15);
+  for (const k in joint) joint[k] = lerp(joint[k], p[k], 0.09);
+  pan.rotation.y = D(joint.pan);
+  tilt.rotation.x = D(joint.tilt);
+  arms[0].rotation.x = -D(joint.armR);
+  arms[1].rotation.x = -D(joint.armL);
+}
+
+// ---------- views ----------
+let view = 'assembled'; var explode = 0;
+function setView(v) {
+  view = v;
+  document.querySelectorAll('#views button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  const xr = v === 'xray';
+  for (const m of shellMats) {
+    m.transparent = xr; m.opacity = xr ? 0.16 : 1; m.depthWrite = !xr; m.needsUpdate = true;
+  }
+  note();
+}
+function note() {
+  const el = document.getElementById('note');
+  el.innerHTML = {
+    assembled: '<b>About 14 cm tall.</b> Cream body, charcoal face, orange arms and ears. Head turns ±60° and nods ±15°; each arm swings 0–120°.',
+    exploded: '<b>8 printed parts</b> (arms and ears print twice). About 80 g of PLA and 7–8 hours of printing in total. Files are in <b>pip-bot/stl/</b>.',
+    xray: '<b>4 servos, 1 brain.</b> Battery lies flat on the floor; ESP32 and charger sit on top of it. The pan servo hangs from the ceiling, the tilt servo lives inside the head.',
+  }[view];
+}
+
+// ---------- UI ----------
+const follow = document.getElementById('follow'), spin = document.getElementById('spin'), showLabels = document.getElementById('labels');
+const exprBox = document.getElementById('exprs');
+function setExpr(name) {
+  expr = name; mood = EXPR[name]; tempExpr = null;
+  exprBox.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.e === name));
+}
+for (const [name, e] of Object.entries(EXPR)) {
+  const b = document.createElement('button'); b.className = 'chip'; b.dataset.e = name;
+  b.innerHTML = `${e.label}<kbd>${e.key}</kbd>`; b.onclick = () => setExpr(name);
+  exprBox.appendChild(b);
+}
+document.querySelectorAll('#views button').forEach(b => b.onclick = () => setView(b.dataset.v));
+addEventListener('keydown', ev => {
+  const hit = Object.entries(EXPR).find(([, e]) => e.key === ev.key);
+  if (hit) setExpr(hit[0]);
+  if (ev.key === 'e') setView(view === 'exploded' ? 'assembled' : 'exploded');
+  if (ev.key === 'x') setView(view === 'xray' ? 'assembled' : 'xray');
+});
+
+const pointer = { x: 0, y: 0, active: false };
+addEventListener('pointermove', ev => {
+  pointer.x = (ev.clientX / innerWidth) * 2 - 1; pointer.y = -(ev.clientY / innerHeight) * 2 + 1; pointer.active = true;
+});
+document.addEventListener('pointerleave', () => pointer.active = false);
+
+// petting: click the head
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', ev => downAt = [ev.clientX, ev.clientY]);
+renderer.domElement.addEventListener('pointerup', ev => {
+  if (!downAt || Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 5) return;
+  ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  if (ray.intersectObject(tiltW, true).length) { tempExpr = 'happy'; tempUntil = performance.now() + 2600; }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+});
+
+// url params for screenshots: ?view=exploded&expr=happy&ui=0&cam=front
+setView(params.get('view') || 'assembled');
+setExpr(params.get('expr') || 'neutral');
+if (params.get('follow') === '0') follow.checked = false;
+const camPreset = { front: [0, 100, 340], side: [300, 120, 140], back: [-170, 150, -300] }[params.get('cam')];
+if (camPreset) camera.position.set(...camPreset);
+if (params.get('cam') === 'face') { camera.position.set(40, 108, 250); controls.target.set(0, 90, 0); }
+if (params.get('view') === 'exploded' && !camPreset) { camera.position.set(380, 250, 470); controls.target.set(0, 128, 0); explode = 1; }
+
+// ---------- loop ----------
+document.getElementById('loading').remove();
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const t = performance.now();
+  drawFace(t);
+  pose(t);
+  explode = lerp(explode, view === 'exploded' ? 1 : 0, 0.08);
+  const ease = explode * explode * (3 - 2 * explode);
+  for (const w of explodables) w.position.copy(w.userData.base).addScaledVector(w.userData.off, ease);
+  if (spin.checked) robot.rotation.y += clock.getDelta() * 0.25; else clock.getDelta();
+  for (const l of labels) {
+    const want = showLabels.checked && ((l.userData.kind === 'part' && view === 'exploded') ||
+      (l.userData.kind === 'elec' && view === 'xray'));
+    l.element.style.opacity = want ? 1 : 0;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
