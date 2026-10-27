@@ -96,9 +96,11 @@ cd pip-bot
 
 ### Wiring
 
+**Full step-by-step electronics guide (tools, soldering, tests, troubleshooting):** https://kanurkarprateek.github.io/pip-bot/guide/ — test programs for each part are in `firmware/tests/`.
+
 ```
                  ┌──────────── 5 V rail ──────────────┐
-LiPo ─ switch ─ IP5306 (USB-C) ─ 5V ─┬─ ESP32 5V pin   │
+LiPo ─ IP5306 (USB-C) ─ switch ─ 5V ─┬─ ESP32 5V pin   │
                                      ├─ 4× servo red   │ + 1000 µF cap across 5V/GND
                                      └─ MAX98357A VIN  │
                  └──────────── GND (all together) ────┘
@@ -120,7 +122,7 @@ Rule: **servos get 5 V from the boost module, never from the ESP32's 3V3 pin.** 
 
 1. **Center all servos first.** Flash a tiny sketch that sets all four to 90°. Do this before attaching any horns or arms, so "90°" means "straight ahead / arms down".
 2. **Body:** screw the pan servo to the ceiling and the two arm servos into the side walls (servo tabs inside, 2 screws each).
-3. **Power:** solder battery → switch → IP5306. Put the 1000 µF capacitor across 5 V and GND. Test with a multimeter: 5 V out, charges on USB-C.
+3. **Power:** solder battery → IP5306 → switch (the switch after the charger lets it charge while off). Put the 1000 µF capacitor across 5 V and GND. Test with a multimeter: 5 V out, charges on USB-C.
 4. **Brain:** wire the ESP32, amp and speaker. Tape the boards down on top of the battery.
 5. **Head:** screw the tilt servo into the cradle. Press the display into the bezel frame. Glue the touch module under the ceiling. Run the head cables through the floor slot.
 6. **Neck:** press the cross horn into the neck disc (screw from below), push it onto the pan servo. Screw the tilt servo horn onto the fin.

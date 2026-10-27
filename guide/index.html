@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip Electronics Guide</title>
+<meta name="description" content="Step-by-step guide to wiring, soldering, testing and fixing the electronics of Pip, a small 3D-printed desk robot.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4f0; --paper: #ffffff; --ink: #1d2026; --muted: #646a74; --line: #e3dfd7;
+    --accent: #ff7a45; --accent-soft: #fff0e8;
+    --v5: #e0453a; --gnd: #2b2f36; --v33: #e8a317; --sig: #2f6fd6; --bat: #8a56d6;
+    --ok: #1f8a5b; --ok-soft: #e6f5ee; --warn: #b54708; --warn-soft: #fff4e5;
+    --code: #f1eee8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171c; --paper: #1e2128; --ink: #eef0f4; --muted: #9aa0ab; --line: #30343d;
+      --accent-soft: #3a2519; --gnd: #c9ced8; --ok-soft: #15322a; --warn-soft: #3a2a14; --code: #262a32;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 "Space Grotesk", system-ui, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px 80px; }
+  header { padding: 48px 0 8px; }
+  .crumbs { font-size: 14px; color: var(--muted); }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 12px; }
+  h1 span { color: var(--accent); }
+  .lede { font-size: 18px; color: var(--muted); max-width: 640px; margin: 0; }
+  nav.toc { margin: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc a { font-size: 13px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); text-decoration: none; background: var(--paper); }
+  nav.toc a:hover { border-color: var(--accent); }
+  section { margin-top: 56px; }
+  h2 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 6px; }
+  h2 small { display: block; font-size: 13px; color: var(--accent); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+  h3 { font-size: 18px; margin: 28px 0 6px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; margin: 16px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .grid .card { margin: 0; padding: 14px 16px; }
+  .grid .card b { display: block; }
+  .grid .card span { font-size: 14px; color: var(--muted); }
+  .test, .warn, .tip { border-radius: 12px; padding: 12px 16px; margin: 14px 0; font-size: 15px; }
+  .test { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+  .warn { background: var(--warn-soft); border-left: 4px solid var(--warn); }
+  .tip { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .test b:first-child, .warn b:first-child, .tip b:first-child { display: block; margin-bottom: 2px; }
+  ol.steps { padding-left: 22px; } ol.steps li { margin: 6px 0; }
+  code, kbd { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .88em; background: var(--code); padding: 1px 6px; border-radius: 5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+  .tbl { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 6px 10px; margin: 16px 0; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .stepnum { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; margin-right: 8px; vertical-align: 3px; }
+  figure { margin: 18px 0; }
+  figure img { width: 100%; border-radius: 16px; display: block; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .diagram { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin: 10px 4px 2px; }
+  /* svg */
+  .box { fill: var(--paper); stroke: var(--line); stroke-width: 2; }
+  .box.hl { stroke: var(--accent); }
+  .t { fill: var(--ink); font: 600 15px "Space Grotesk", sans-serif; }
+  .ts { fill: var(--muted); font: 12px "Space Grotesk", sans-serif; }
+  .tm { fill: var(--ink); font: 12px "JetBrains Mono", monospace; }
+  .w { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .v5 { stroke: var(--v5); } .gnd { stroke: var(--gnd); } .v33 { stroke: var(--v33); } .sig { stroke: var(--sig); } .bat { stroke: var(--bat); }
+  .wl { font: 600 12px "Space Grotesk", sans-serif; }
+  footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="crumbs"><a href="../">Pip</a> · <a href="../viewer/">3D viewer</a> · Electronics guide</div>
+  <h1>Wiring Pip, <span>step by step</span></h1>
+  <p class="lede">How to connect every part, solder it, check it works, fit it inside the shell, and what to do when something doesn't work. No electronics experience needed. Test each part before you add the next one.</p>
+  <nav class="toc">
+    <a href="#tools">1 · Tools</a><a href="#safety">2 · Safety</a><a href="#map">3 · Wiring map</a>
+    <a href="#arduino">4 · Computer setup</a><a href="#build">5 · Build &amp; test</a><a href="#fit">6 · Fit inside</a>
+    <a href="#fix">7 · Fixing problems</a>
+  </nav>
+</header>
+
+<!-- ============ TOOLS ============ -->
+<section id="tools">
+  <h2><small>Step 1</small>Tools you need</h2>
+  <div class="grid">
+    <div class="card"><b>Soldering iron, adjustable</b><span>60 W with a temperature knob. Set it to 330–350 °C. ₹500–1,500.</span></div>
+    <div class="card"><b>Solder wire, 0.8 mm, with flux core</b><span>63/37 tin-lead melts most easily. A small tub of flux paste helps a lot.</span></div>
+    <div class="card"><b>Multimeter</b><span>Any cheap one. You'll use it to check voltages and find shorts. ₹300+.</span></div>
+    <div class="card"><b>Wire stripper + small cutters</b><span>For 24–30 AWG wire.</span></div>
+    <div class="card"><b>Heat-shrink tube + lighter or heat gun</b><span>Covers every bare joint so nothing touches.</span></div>
+    <div class="card"><b>Hot glue gun</b><span>Holds wires and boards in place inside the shell.</span></div>
+    <div class="card"><b>Breadboard + jumper wires</b><span>To test each part before soldering anything.</span></div>
+    <div class="card"><b>Small screwdrivers, tweezers, "helping hands" clamp</b><span>The clamp holds parts while you solder.</span></div>
+    <div class="card"><b>Extra bits</b><span>Small perfboard, male pin headers, double-sided foam tape, a USB-C <i>data</i> cable.</span></div>
+  </div>
+  <div class="tip"><b>Never soldered before?</b>Watch one 10-minute "how to solder for beginners" video, then practise on 5 joints on a spare piece of perfboard. The rule: heat the pad and the pin together for 2 seconds, then touch the solder to <i>them</i>, not to the iron. A good joint is shiny and shaped like a small volcano.</div>
+</section>
+
+<!-- ============ SAFETY ============ -->
+<section id="safety">
+  <h2><small>Step 2</small>Safety first</h2>
+  <div class="warn"><b>The LiPo battery is the one dangerous part.</b>
+    Never let its red and black wires touch each other. Cut and solder <i>one wire at a time</i>, and cover each one with tape straight away. Never puncture, bend or crush it. If it ever gets puffy or hot, stop using it and put it somewhere that can't catch fire. Don't leave it charging overnight.</div>
+  <div class="warn"><b>Check polarity before you plug in power.</b>
+    Red is + and black is −. A battery connected backwards can kill the charger board in a second. Check with the multimeter before you connect it.</div>
+  <p>Solder somewhere with fresh air, and wash your hands afterwards if you used leaded solder.</p>
+</section>
+
+<!-- ============ MAP ============ -->
+<section id="map">
+  <h2><small>Step 3</small>The wiring map</h2>
+  <p>Pip has two halves: a <b>power side</b> (battery → charger → switch → 5 V for everything) and a <b>signal side</b> (the ESP32 talking to each part). Every part shares the same <b>GND</b>. That matters: a part without GND won't work even if everything else looks right.</p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1000 690" role="img" aria-label="Wiring diagram for Pip">
+    <!-- power chain -->
+    <rect class="box" x="20" y="20" width="170" height="78" rx="12"/>
+    <text class="t" x="36" y="50">LiPo battery</text><text class="ts" x="36" y="72">1000 mAh · 3.7 V</text><text class="ts" x="36" y="88">red +  black −</text>
+    <rect class="box hl" x="270" y="20" width="210" height="78" rx="12"/>
+    <text class="t" x="286" y="50">IP5306 charger</text><text class="ts" x="286" y="72">charges from USB-C</text><text class="ts" x="286" y="88">boosts battery → 5 V</text>
+    <rect class="box" x="560" y="30" width="130" height="58" rx="12"/>
+    <text class="t" x="576" y="58">Switch</text><text class="ts" x="576" y="76">on / off</text>
+    <path class="w bat" d="M190 48 H270"/><text class="wl" x="200" y="40" fill="var(--bat)">B+</text>
+    <path class="w gnd" d="M190 74 H270"/><text class="wl" x="200" y="92" fill="var(--gnd)">B−</text>
+    <path class="w v5" d="M480 59 H560"/><text class="wl" x="490" y="50" fill="var(--v5)">5V OUT</text>
+    <!-- rails -->
+    <path class="w v5" d="M690 59 H760 V140 H40"/>
+    <path class="w gnd" d="M440 98 V166 H40"/><path class="w gnd" d="M440 166 H960"/><path class="w v5" d="M760 140 H960"/>
+    <text class="wl" x="830" y="132" fill="var(--v5)">5 V RAIL</text>
+    <text class="wl" x="830" y="186" fill="var(--gnd)">GND RAIL</text>
+
+    <!-- servo hub -->
+    <rect class="box" x="20" y="230" width="250" height="150" rx="12"/>
+    <text class="t" x="36" y="260">Servo hub board</text>
+    <text class="ts" x="36" y="282">perfboard: 4 × 3-pin headers</text>
+    <text class="ts" x="36" y="300">+ 1000 µF capacitor on 5V/GND</text>
+    <text class="tm" x="36" y="330">GND · 5V · SIG  (×4)</text>
+    <text class="ts" x="36" y="352">brown · red · orange</text>
+    <path class="w v5" d="M90 140 V230"/><path class="w gnd" d="M120 166 V230"/>
+    <!-- servos -->
+    <g>
+      <rect class="box" x="20" y="430" width="112" height="56" rx="10"/><text class="t" x="34" y="455">Pan</text><text class="ts" x="34" y="474">turns head</text>
+      <rect class="box" x="148" y="430" width="112" height="56" rx="10"/><text class="t" x="162" y="455">Tilt</text><text class="ts" x="162" y="474">nods head</text>
+      <rect class="box" x="20" y="500" width="112" height="56" rx="10"/><text class="t" x="34" y="525">Arm L</text><text class="ts" x="34" y="544">SG90</text>
+      <rect class="box" x="148" y="500" width="112" height="56" rx="10"/><text class="t" x="162" y="525">Arm R</text><text class="ts" x="162" y="544">SG90</text>
+      <path class="w gnd" d="M140 380 V430" stroke-width="2"/><text class="ts" x="150" y="410">3 wires each</text>
+    </g>
+
+    <!-- ESP32 -->
+    <rect class="box hl" x="370" y="230" width="230" height="330" rx="14"/>
+    <text class="t" x="386" y="262">ESP32-S3 Super Mini</text>
+    <text class="ts" x="386" y="282">the brain</text>
+    <text class="tm" x="386" y="318">5V  ← 5 V rail</text>
+    <text class="tm" x="386" y="338">GND ← GND rail</text>
+    <text class="tm" x="386" y="358">3V3 → display, touch</text>
+    <text class="tm" x="386" y="392">1 2 3 4 → servos</text>
+    <text class="tm" x="386" y="420">5 6 13  → amp</text>
+    <text class="tm" x="386" y="448">12 11 10 9 8 7</text>
+    <text class="tm" x="386" y="466">        → display</text>
+    <text class="tm" x="386" y="494">44      → touch</text>
+    <text class="ts" x="386" y="540">USB-C here = upload code</text>
+    <path class="w v5" d="M420 140 V230"/><path class="w gnd" d="M450 166 V230"/>
+    <path class="w sig" d="M370 388 H300 V300 H270"/><text class="wl" x="282" y="404" fill="var(--sig)">4 signals</text>
+
+    <!-- amp -->
+    <rect class="box" x="700" y="230" width="270" height="92" rx="12"/>
+    <text class="t" x="716" y="260">MAX98357A amp</text>
+    <text class="tm" x="716" y="284">VIN←5V  GND  BCLK LRC DIN</text>
+    <text class="ts" x="716" y="306">+ / − → 20 mm speaker</text>
+    <path class="w v5" d="M900 140 V230"/><path class="w gnd" d="M930 166 V230"/>
+    <path class="w sig" d="M600 416 H650 V280 H700"/><text class="wl" x="612" y="408" fill="var(--sig)">3</text>
+    <circle class="box" cx="900" cy="372" r="28"/><text class="ts" x="878" y="377">spkr</text>
+    <path class="w gnd" d="M900 322 V344" stroke-width="2"/>
+
+    <!-- display -->
+    <rect class="box" x="700" y="440" width="270" height="110" rx="12"/>
+    <text class="t" x="716" y="470">1.69" ST7789 display</text>
+    <text class="tm" x="716" y="494">VCC←3V3 GND SCL SDA</text>
+    <text class="tm" x="716" y="512">RES DC CS BLK</text>
+    <text class="ts" x="716" y="536">in the head</text>
+    <path class="w sig" d="M600 456 H700"/><text class="wl" x="612" y="448" fill="var(--sig)">6</text>
+    <path class="w v33" d="M600 354 H680 V500 H700"/><text class="wl" x="612" y="346" fill="var(--v33)">3V3</text>
+
+    <!-- touch -->
+    <rect class="box" x="700" y="580" width="270" height="78" rx="12"/>
+    <text class="t" x="716" y="610">TTP223 touch pad</text>
+    <text class="tm" x="716" y="634">VCC←3V3  GND  I/O</text>
+    <path class="w sig" d="M600 490 H640 V620 H700"/><text class="wl" x="612" y="482" fill="var(--sig)">1</text>
+    <path class="w v33" d="M680 500 V640 H700"/>
+    <text class="ts" x="20" y="610">All GND wires join the GND rail.</text>
+    <text class="ts" x="20" y="630">Display and touch take 3.3 V from the ESP32,</text>
+    <text class="ts" x="20" y="650">everything else takes 5 V from the rail.</text>
+  </svg>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--v5)"></i>5 V (red wire)</span>
+    <span><i class="dot" style="background:var(--gnd)"></i>GND (black wire)</span>
+    <span><i class="dot" style="background:var(--v33)"></i>3.3 V (yellow)</span>
+    <span><i class="dot" style="background:var(--sig)"></i>signal (any other colour)</span>
+    <span><i class="dot" style="background:var(--bat)"></i>battery</span>
+  </div>
+
+  <h3>Every connection, in one table</h3>
+  <div class="tbl"><table>
+    <tr><th>Part</th><th>Part's pin</th><th>Connects to</th></tr>
+    <tr><td rowspan="2">Battery</td><td>red +</td><td>IP5306 <code>B+</code> (or <code>BAT+</code>)</td></tr>
+    <tr><td>black −</td><td>IP5306 <code>B−</code></td></tr>
+    <tr><td rowspan="2">IP5306</td><td><code>5V OUT +</code></td><td>Switch middle pin → switch side pin → 5 V rail</td></tr>
+    <tr><td><code>5V OUT −</code></td><td>GND rail</td></tr>
+    <tr><td rowspan="3">ESP32-S3</td><td><code>5V</code></td><td>5 V rail</td></tr>
+    <tr><td><code>GND</code></td><td>GND rail</td></tr>
+    <tr><td><code>3V3</code></td><td>Display VCC, Touch VCC</td></tr>
+    <tr><td rowspan="7">Display</td><td><code>VCC</code> / <code>GND</code></td><td>ESP32 <code>3V3</code> / GND</td></tr>
+    <tr><td><code>SCL</code></td><td>GPIO 12</td></tr>
+    <tr><td><code>SDA</code></td><td>GPIO 11</td></tr>
+    <tr><td><code>CS</code></td><td>GPIO 10</td></tr>
+    <tr><td><code>DC</code></td><td>GPIO 9</td></tr>
+    <tr><td><code>RES</code></td><td>GPIO 8</td></tr>
+    <tr><td><code>BLK</code></td><td>GPIO 7 (backlight)</td></tr>
+    <tr><td rowspan="2">Servos (×4)</td><td>brown / red</td><td>GND rail / 5 V rail (through the servo hub)</td></tr>
+    <tr><td>orange (signal)</td><td>Pan → GPIO 1 · Tilt → GPIO 2 · Left arm → GPIO 3 · Right arm → GPIO 4</td></tr>
+    <tr><td rowspan="3">Amp</td><td><code>VIN</code> / <code>GND</code></td><td>5 V rail / GND rail</td></tr>
+    <tr><td><code>BCLK</code> · <code>LRC</code> · <code>DIN</code></td><td>GPIO 5 · GPIO 6 · GPIO 13</td></tr>
+    <tr><td>Speaker <code>+</code> <code>−</code></td><td>Speaker's two wires (either way round)</td></tr>
+    <tr><td>Touch</td><td><code>VCC</code> · <code>GND</code> · <code>I/O</code></td><td>ESP32 <code>3V3</code> · GND · GPIO 44 (marked <code>RX</code> on some boards)</td></tr>
+  </table></div>
+  <div class="tip"><b>Why the switch goes after the charger:</b>this way the battery still charges over USB-C while Pip is switched off.</div>
+</section>
+
+<!-- ============ ARDUINO ============ -->
+<section id="arduino">
+  <h2><small>Step 4</small>Set up your computer</h2>
+  <ol class="steps">
+    <li>Install <b>Arduino IDE 2</b> from arduino.cc.</li>
+    <li>In <i>Settings → Additional boards manager URLs</i>, paste<br><code>https://espressif.github.io/arduino-esp32/package_esp32_index.json</code></li>
+    <li><i>Boards Manager</i> → search <b>esp32</b> → install "esp32 by Espressif Systems" (version 3.x).</li>
+    <li><i>Library Manager</i> → install <b>GFX Library for Arduino</b> (by moononournation) and <b>ESP32Servo</b>.</li>
+    <li>Pick board <b>ESP32S3 Dev Module</b>. Under <i>Tools</i>, set <b>USB CDC On Boot: Enabled</b> (otherwise you won't see any messages from the board).</li>
+    <li>Download the test programs: <a href="https://github.com/KanurkarPrateek/pip-bot/tree/main/firmware/tests"><code>firmware/tests/</code></a>. Each folder has its own <code>pins.h</code> with the pin numbers from the table above.</li>
+  </ol>
+  <div class="test"><b>Test: talk to the board</b>Plug the ESP32 into your computer with a USB-C <i>data</i> cable. Open <i>File → Examples → 01.Basics → Blink</i>, change <code>LED_BUILTIN</code> to <code>48</code>, and upload. The small LED on the board should flash.
+  If the board doesn't show up: hold the <kbd>BOOT</kbd> button, plug it in, let go, then upload again.</div>
+</section>
+
+<!-- ============ BUILD ============ -->
+<section id="build">
+  <h2><small>Step 5</small>Build and test, one part at a time</h2>
+  <p>Do steps A–D on a breadboard first, with jumper wires. Solder only once each part works. That way, if something breaks, you know which part caused it.</p>
+
+  <h3><span class="stepnum">A</span>Screen</h3>
+  <ol class="steps">
+    <li>Solder pin headers onto the ESP32 (long side down) and push it into the breadboard.</li>
+    <li>Wire the display: 8 wires, exactly as in the table. VCC goes to <b>3V3, not 5V</b>.</li>
+    <li>Upload <code>01_display</code>.</li>
+  </ol>
+  <div class="test"><b>Test:</b>two cyan eyes appear and blink every 2–3 seconds, with "hi, I'm Pip" underneath. 🎉</div>
+
+  <h3><span class="stepnum">B</span>Power chain</h3>
+  <ol class="steps">
+    <li>Solder the battery to the IP5306 <code>B+</code> / <code>B−</code> pads. <b>One wire at a time</b>, red to +.</li>
+    <li>Solder a red wire from IP5306 <code>5V OUT +</code> to the switch's middle pin. Another red wire from a side pin of the switch becomes your <b>5 V rail</b>.</li>
+    <li>A black wire from <code>5V OUT −</code> becomes your <b>GND rail</b>.</li>
+  </ol>
+  <div class="test"><b>Test with the multimeter (set to 20 V DC):</b>Switch ON. Most IP5306 boards need a <b>short press of their button</b> (or plugging in USB) to wake up. Measure between the 5 V rail and GND rail: you should see <b>5.0–5.2 V</b>. Switch OFF → 0 V. Plug USB-C into the charger: its LEDs should light up.</div>
+
+  <h3><span class="stepnum">C</span>Servo hub + servos</h3>
+  <p>Four servos all need 5 V and GND, so make a tiny board that shares them out:</p>
+  <ol class="steps">
+    <li>Cut a piece of perfboard about 30 × 20 mm. Solder four rows of 3 male header pins.</li>
+    <li>Join all the left pins together (GND, brown), all the middle pins (5 V, red). The right pin of each row is that servo's signal.</li>
+    <li>Solder the <b>1000 µF capacitor</b> across 5 V and GND. <b>The stripe on its side marks −</b>, which goes to GND. Backwards, it can pop.</li>
+    <li>Wire the hub's 5 V and GND to the rails, and the 4 signal pins to GPIO 1, 2, 3, 4.</li>
+    <li>Plug each servo in: <b>brown wire to GND side</b>.</li>
+  </ol>
+  <div class="test"><b>Test: <code>02_servos</code></b>Upload it, <b>unplug the USB cable</b>, then switch Pip on. All 4 servos turn to their middle position (90°) and hold. <b>Now fit the horns</b>, pointing straight ahead for the neck and straight down for the arms. Then set <code>CENTER_ONLY = false</code> and upload again: each servo wiggles in turn.</div>
+  <div class="warn"><b>Don't power the servos from your computer's USB.</b>Four servos can pull 1.5 A, which is more than a laptop port gives. That's why we unplug USB and run on the battery for this test.</div>
+
+  <h3><span class="stepnum">D</span>Sound</h3>
+  <ol class="steps">
+    <li>Amp <code>VIN</code> → 5 V rail, <code>GND</code> → GND rail. <code>BCLK</code>, <code>LRC</code>, <code>DIN</code> → GPIO 5, 6, 13. Leave <code>GAIN</code> and <code>SD</code> unconnected.</li>
+    <li>Solder the speaker's two wires to the amp's <code>+</code> and <code>−</code> screw/pads.</li>
+  </ol>
+  <div class="test"><b>Test: <code>04_sound</code></b>A happy "bee-doo!" chirp every 2 seconds.</div>
+
+  <h3><span class="stepnum">E</span>Touch pad</h3>
+  <ol class="steps">
+    <li><code>VCC</code> → 3V3, <code>GND</code> → GND, <code>I/O</code> → GPIO 44.</li>
+  </ol>
+  <div class="test"><b>Test: <code>03_touch</code></b>Open the Serial Monitor (115200). Touch the pad: it prints "touched!". Then hold the pad against the inside of the printed head and touch the outside: it should still work through the plastic.</div>
+
+  <h3><span class="stepnum">F</span>The head cable</h3>
+  <p>The display, touch pad and tilt servo all live in the head, and their wires pass through the neck. That's 12 wires:</p>
+  <div class="tbl"><table>
+    <tr><th>Wire</th><th>For</th></tr>
+    <tr><td>3V3, GND</td><td>display + touch (shared)</td></tr>
+    <tr><td>SCL, SDA, CS, DC, RES, BLK</td><td>display</td></tr>
+    <tr><td>I/O</td><td>touch</td></tr>
+    <tr><td>5 V, GND, signal</td><td>tilt servo</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Use thin, soft <b>silicone wire (28–30 AWG)</b>, about <b>15 cm</b> long. Stiff PVC wire fights the head when it turns.</li>
+    <li>Twist the bundle loosely and wrap it with a little tape every 3 cm.</li>
+    <li>Put a <b>connector at the body end</b> (a 2×6 Dupont header works) so you can take the head off later.</li>
+    <li>Route it through the slot in the head floor and the round hole in the body top. Leave a loose loop: turn the head fully left and right by hand and check nothing pulls tight.</li>
+  </ol>
+</section>
+
+<!-- ============ FIT ============ -->
+<section id="fit">
+  <h2><small>Step 6</small>Fitting everything inside</h2>
+  <figure>
+    <img src="../images/xray.png" alt="See-through view of Pip showing where each part sits">
+    <figcaption>Where everything goes. Open the <a href="../viewer/">3D viewer</a> and pick "X-ray" to turn it around.</figcaption>
+  </figure>
+  <ol class="steps">
+    <li><b>Battery</b> flat on the body floor, held with a strip of double-sided foam tape.</li>
+    <li><b>Charger</b> on top of the battery at the back, its USB-C port lined up with the hole in the back cover. Hot-glue its edges once you're happy with the position.</li>
+    <li><b>ESP32</b> on top of the battery at the front, USB-C port facing the back so you can still reach it with the cover off.</li>
+    <li><b>Amp + servo hub</b> beside the charger. Wrap the hub in Kapton or electrical tape so its pins can't touch anything.</li>
+    <li><b>Speaker</b> behind the front grille, a ring of hot glue around its edge.</li>
+    <li><b>Switch</b> pushed into the slot in the back cover, a dot of hot glue on each side.</li>
+    <li><b>Servos</b> screwed in through their tabs (pan in the ceiling, arms in the side walls, tilt in the head cradle).</li>
+    <li><b>Display</b> pressed into the frame on the back of the face bezel, ribbon cable through the gap at the bottom. <b>Touch pad</b> hot-glued flat under the head's ceiling.</li>
+    <li>Tidy the wires with tape or small dabs of hot glue. Keep them away from the servo horns and moving parts.</li>
+  </ol>
+  <div class="test"><b>Final test before closing the covers:</b>switch on and run each test program once more. Then close the face bezel and back cover (4 screws each).</div>
+</section>
+
+<!-- ============ FIX ============ -->
+<section id="fix">
+  <h2><small>Step 7</small>Something not working? How to fix it</h2>
+  <p>Always start with the two most common causes: <b>a missing GND connection</b> and <b>a loose or cold solder joint</b> (dull and lumpy instead of shiny). Wiggle wires gently while it's running: if things flicker, you've found the bad one.</p>
+
+  <h3>Screen</h3>
+  <div class="tbl"><table>
+    <tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td>Screen completely black</td><td>Backlight off, or VCC/GND missing</td><td>Check <code>BLK</code> → GPIO 7 and VCC → 3V3. Measure 3.3 V between VCC and GND on the display.</td></tr>
+    <tr><td>Backlight on, but nothing drawn</td><td>Data wires swapped or loose</td><td>Check <code>SCL</code> → 12 and <code>SDA</code> → 11 (easy to swap). Re-check CS, DC, RES.</td></tr>
+    <tr><td>Picture shifted, with a stripe of noise on one side</td><td>Wrong offset for your panel</td><td>In <code>01_display</code> change the four <code>0, 20, 0, 20</code> numbers to <code>20, 0, 20, 0</code>.</td></tr>
+    <tr><td>Colors look inverted (black is white)</td><td>Panel is not IPS</td><td>Change <code>true</code> to <code>false</code> in the <code>Arduino_ST7789(...)</code> line.</td></tr>
+    <tr><td>Picture sideways</td><td>Rotation</td><td>Try rotation <code>3</code> instead of <code>1</code>.</td></tr>
+  </table></div>
+
+  <h3>Power</h3>
+  <div class="tbl"><table>
+    <tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td>Nothing turns on</td><td>IP5306 asleep, or battery empty</td><td>Short-press the IP5306 button, or plug in USB-C. Measure the battery: below 3.3 V it needs charging.</td></tr>
+    <tr><td>Pip switches itself off after ~30 seconds</td><td>The IP5306 sleeps when it thinks nothing is connected (load under ~50 mA)</td><td>Keep the screen backlight on, since it draws enough current to keep the IP5306 awake. If it still happens, buy an IP5306 board marked "always on", or use a TP4056 charger + MT3608 boost pair instead.</td></tr>
+    <tr><td>ESP32 restarts when servos move</td><td>Voltage drops when servos start</td><td>Check the 1000 µF capacitor is there and the right way round. Use thicker wires (24 AWG) for the 5 V and GND rails. Charge the battery.</td></tr>
+    <tr><td>Something gets hot or smells</td><td>Short circuit or reversed wire</td><td><b>Switch off and unplug immediately.</b> Look for solder bridges between pins and check every red/black wire with the multimeter (continuity mode beeps when two points are connected).</td></tr>
+    <tr><td>Battery looks puffy</td><td>Damaged cell</td><td>Stop using it. Don't puncture it. Take it to an e-waste or battery recycling point.</td></tr>
+  </table></div>
+
+  <h3>Servos</h3>
+  <div class="tbl"><table>
+    <tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td>Servo doesn't move at all</td><td>No 5 V, no GND, or wrong signal pin</td><td>Measure 5 V on the hub. Check the plug isn't reversed (brown = GND). Try that servo on another hub row.</td></tr>
+    <tr><td>Servo buzzes or shakes when still</td><td>Pushing against the shell, or a noisy signal</td><td>Re-centre with <code>02_servos</code> and refit the horn so it isn't pressing on anything. In your own code, call <code>detach()</code> on a servo when it is resting.</td></tr>
+    <tr><td>Head or arm moves the wrong way</td><td>Servo mounted the other way round</td><td>No rewiring needed: it's flipped in software (change <code>angle</code> to <code>180 − angle</code>).</td></tr>
+    <tr><td>Head doesn't point straight at 90°</td><td>Horn fitted one tooth off</td><td>Run <code>02_servos</code> (it holds 90°), take the horn off and push it back on straight.</td></tr>
+    <tr><td>Servo stopped working after a crash</td><td>Stripped plastic gears</td><td>Replace the SG90 (they're cheap) or use an MG90S (metal gears, same size).</td></tr>
+  </table></div>
+
+  <h3>Sound, touch, uploading</h3>
+  <div class="tbl"><table>
+    <tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td>No sound</td><td>I2S wires swapped, or speaker not connected</td><td>Check BCLK → 5, LRC → 6, DIN → 13. Check the amp has 5 V.</td></tr>
+    <tr><td>Crackling while servos move</td><td>Electrical noise on the 5 V rail</td><td>Keep the amp wires short and away from servo wires. Add a 100 µF capacitor at the amp's VIN.</td></tr>
+    <tr><td>Touch always "on" or never responds</td><td>It calibrated while being touched, or the plastic is too thick</td><td>Switch off and on without touching it. Glue it flat against the plastic with no air gap. Stick a 2 × 2 cm piece of aluminium foil to its pad to make it bigger.</td></tr>
+    <tr><td>Computer doesn't see the board</td><td>Charge-only USB cable, or board in a bad state</td><td>Try another cable. Hold <kbd>BOOT</kbd>, plug in, release, then upload.</td></tr>
+    <tr><td>Uploads, but Serial Monitor is empty</td><td>USB CDC is off</td><td><i>Tools → USB CDC On Boot → Enabled</i>, then upload again.</td></tr>
+    <tr><td>Head can't turn fully, or wires tug</td><td>Head cable too short or too stiff</td><td>Lengthen the loop, use silicone wire. Never force the head by hand while it's powered.</td></tr>
+  </table></div>
+
+  <div class="tip"><b>Still stuck?</b>Go back to the breadboard and test that one part alone with its test program. A part that works alone but not inside Pip almost always has a wiring or power problem, not a broken part.</div>
+</section>
+
+<footer>
+  Pip · <a href="../">project page</a> · <a href="../viewer/">3D viewer</a> · <a href="https://github.com/KanurkarPrateek/pip-bot">source on GitHub</a>
+</footer>
+</div>
+</body>
+</html>
